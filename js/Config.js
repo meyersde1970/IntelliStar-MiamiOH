@@ -1,12 +1,12 @@
 window.CONFIG = {
-  crawl: `Thanks to all the contributors of this project. While it's not completely finished, the community effort has made this possible. Stars, contributions, and feedback are welcome and appreciated. Thanks for trying out this emulator.`,
-  greeting: 'This is your weather',
+  crawl: `This service brought to you by the Interactive Language Resource Center at Miami University`,
+  greeting: 'Here is your forecast',
   language: 'en-US', // Supported in TWC API
   countryCode: 'US', // Supported in TWC API (for postal key)
   units: 'e', // Supported in TWC API (e = English (imperial), m = Metric, h = Hybrid (UK)),
   unitField: 'imperial', // Supported in TWC API. This field will be filled in automatically. (imperial = e, metric = m, uk_hybrid = h)
-  loop: false,
-  locationMode: "POSTAL",
+  loop: true,
+  locationMode: "AIRPORT",
   secrets: {
     // Possibly deprecated key: See issue #29
     // twcAPIKey: 'd522aa97197fd864d36b418f39ebb323'
@@ -33,53 +33,51 @@ window.CONFIG = {
   submit: (btn, e) => {
     let args = {}
     const currentLoop = (localStorage.getItem('loop') === 'y')
+    
     CONFIG.locationOptions.forEach((opt) => {
-      args[opt.id] = getElement(`${opt.id}-text`).value
-      args[`${opt.id}-button`] = getElement(`${opt.id}-button`).checked
-      if (!currentLoop) {
+      let textElem = getElement(`${opt.id}-text`);
+      let btnElem = getElement(`${opt.id}-button`);
+      if (textElem) args[opt.id] = textElem.value;
+      if (btnElem) args[`${opt.id}-button`] = btnElem.checked;
+      if (!currentLoop && args[opt.id] !== undefined) {
         localStorage.setItem(opt.id, args[opt.id])
       }
     })
-    args['countryCode'] = getElement('country-code-text').value
-    if (!currentLoop) {
-      localStorage.setItem('countryCode', args['countryCode'])
+    
+    let countryCodeElem = getElement('country-code-text');
+    if (countryCodeElem) {
+      args['countryCode'] = countryCodeElem.value;
+      if (!currentLoop) {
+        localStorage.setItem('countryCode', args['countryCode'])
+      }
     }
+    
     CONFIG.options.forEach((opt) => {
-      args[opt.id] = getElement(`${opt.id}-text`).value
-      if (!currentLoop) {
-        localStorage.setItem(opt.id, args[opt.id])
+      let textElem = getElement(`${opt.id}-text`);
+      if (textElem) {
+        args[opt.id] = textElem.value;
+        if (!currentLoop) {
+          localStorage.setItem(opt.id, args[opt.id])
+        }
       }
     })
+    
     console.log(args)
+    
     if (currentLoop) {
       if (localStorage.getItem('crawlText')) CONFIG.crawl = localStorage.getItem('crawlText')
       if (localStorage.getItem('greetingText')) CONFIG.greeting = localStorage.getItem('greetingText')
       if (localStorage.getItem('countryCode')) CONFIG.countryCode = localStorage.getItem('countryCode')
     } else {
-      if (args.crawlText !== '') CONFIG.crawl = args.crawlText
-      if (args.greetingText !== '') CONFIG.greeting = args.greetingText
-      if (args.countryCode !== '') CONFIG.countryCode = args.countryCode
+      if (args.crawlText && args.crawlText !== '') CONFIG.crawl = args.crawlText
+      if (args.greetingText && args.greetingText !== '') CONFIG.greeting = args.greetingText
+      if (args.countryCode && args.countryCode !== '') CONFIG.countryCode = args.countryCode
       if (args.loop === 'y') CONFIG.loop = true
     }
     
-    if (args['airport-code-button']==true){ 
-      CONFIG.locationMode="AIRPORT" 
-      if(args['airport-code'].length==0){
-        alert("Please enter an airport code")
-        return
-      }
-    } 
-    else { 
-      CONFIG.locationMode="POSTAL" 
-      if(!currentLoop && args['zip-code'].length==0){
-        alert("Please enter a postal code")
-        return
-      }
-
-    }
-    
-    zipCode = args['zip-code'] || localStorage.getItem('zip-code')
-    airportCode = args['airport-code'] || localStorage.getItem('airport-code')
+    // Hardcode location mode and airport code, stripping ZIP code fallbacks
+    CONFIG.locationMode = "AIRPORT";
+    airportCode = "KOXD";
     
     CONFIG.unitField = CONFIG.units === 'm' ? 'metric' : (CONFIG.units === 'h' ? 'uk_hybrid' : 'imperial')
     fetchCurrentWeather();
@@ -88,15 +86,14 @@ window.CONFIG = {
     let settingsPrompt = getElement('settings-prompt')
     let advancedSettingsOptions = getElement('advanced-settings-options')
 
-    //Advanced Options Setup
+    // Advanced Options Setup
     CONFIG.options.forEach((option) => {
-      //<div class="regular-text settings-item settings-text">Zip Code</div>
       let label = document.createElement('div')
-        label.classList.add('strong-text', 'settings-item', 'settings-text', 'settings-padded')
-        label.style.textAlign='left'
+      label.classList.add('strong-text', 'settings-item', 'settings-text', 'settings-padded')
+      label.style.textAlign='left'
       label.appendChild(document.createTextNode(option.name))
       label.id = `${option.id}-label`
-      //<input class="settings-item settings-text" type="text" id="zip-code-text">
+      
       let textbox = document.createElement('textarea')
       textbox.classList.add('settings-item', 'settings-text', 'settings-input')
       textbox.type = 'text'
@@ -107,36 +104,31 @@ window.CONFIG = {
       textbox.style.minWidth='320px'
       textbox.style.height='100px'
       textbox.style.marginTop='10px'
+      
       if (localStorage.getItem(option.id)) textbox.value = localStorage.getItem(option.id)
+      
       let br = document.createElement('br')
       advancedSettingsOptions.appendChild(label)
       advancedSettingsOptions.appendChild(textbox)
       advancedSettingsOptions.appendChild(br)
-      //<br>
     })
 
     let advancedButtonContainer = document.createElement('div')
     advancedButtonContainer.classList.add('settings-container')
     settingsPrompt.appendChild(advancedButtonContainer)
+    
     let advancedButton = document.createElement('button')
     advancedButton.innerHTML = "Show advanced options"
     advancedButton.id = "advanced-options-text"
     advancedButton.setAttribute('onclick', 'toggleAdvancedSettings()')
     advancedButton.classList.add('regular-text', 'settings-input', 'button')
     advancedButtonContainer.appendChild(advancedButton)
-    //<button class="setting-item settings-text" id="submit-button" onclick="checkZipCode();" style="margin-bottom: 10px;">Start</button>-->
-    let btn = document.createElement('button')
-    btn.classList.add('setting-item', 'settings-text', 'settings-input', 'button')
-    btn.id = 'submit-button'
-    btn.onclick = CONFIG.submit
-    btn.style = 'margin-bottom: 10px;'
-    btn.appendChild(document.createTextNode('Start'))
-    settingsPrompt.appendChild(btn)
-    if (CONFIG.loop || localStorage.getItem('loop') === 'y') {
-      CONFIG.loop = true;
+
+    // Unconditionally hide the settings menu and submit on load
+    if (typeof hideSettings === 'function') {
       hideSettings();
-      CONFIG.submit()
     }
+    CONFIG.submit();
   }
 }
 
